@@ -1,4 +1,4 @@
-# Architecture — Translator Recipe
+# Architecture — Filler Words Recipe
 
 Two processes. The browser talks only to Next.js `/api/*`, which rewrites to the
 agent backend. The agent backend owns Agora tokens and agent lifecycle. OpenAI is
@@ -14,21 +14,25 @@ Browser
 Next.js  (rewrites /api/* → AGENT_BACKEND_URL)
   ▼
 Agent backend (server/, :8000)
-  │  builds session with OpenAI(model=OPENAI_MODEL, system_messages=[translate to TARGET_LANG])
+  │  builds session with OpenAI(model=OPENAI_MODEL, system_messages=[friendly assistant])
+  │  filler_words: static phrase list played during LLM latency
+  │  farewell_config: graceful exit on stop (graceful_enabled=true, graceful_timeout_seconds=5)
   ▼
 Agora ConvoAI Cloud
-  │  user speech → Deepgram STT (managed, language=SOURCE_LANG)
-  │  text → OpenAI translation (Agora-managed, keyless, model=OPENAI_MODEL)
-  │  translation → MiniMax TTS (managed, voice_id=TTS_VOICE)
+  │  user speech → Deepgram STT (managed, nova-3)
+  │  text → OpenAI assistant (Agora-managed, keyless, model=OPENAI_MODEL)
+  │         [filler phrase plays while LLM generates]
+  │  response → MiniMax TTS (managed)
   ▼
-User hears translated speech; RTM transcript + metrics → web UI
+User hears the agent; RTM transcript + metrics → web UI
 ```
 
-`POST /api/stopAgent { agentId }` ends the session.
+`POST /api/stopAgent { agentId }` ends the session. The agent speaks a farewell
+phrase before leaving the channel (`farewell_config`).
 
 ## Why no llm/ service
 
-Unlike the custom-llm recipe, the translator uses the **managed OpenAI vendor**
+This recipe uses the **managed OpenAI vendor**
 (`agora_agent.agentkit.vendors.OpenAI`). Agora holds the OpenAI API key on its
 cloud; the recipe is zero-key by default. An optional `OPENAI_API_KEY` env var
 lets you bring your own account if needed.
@@ -38,20 +42,24 @@ This means:
 - No tunnel (ngrok) required.
 - The only required credentials are `AGORA_APP_ID` + `AGORA_APP_CERTIFICATE`.
 
-## Translation prompt
+## Filler words
 
-`server/src/translation_config.py` contains the pure `build_translation_system_messages`
-function, which builds the system prompt injected into every OpenAI call:
+`server/src/filler_config.py` contains two pure builder functions:
 
-> "Translate the user's message into {TARGET_LANG}. Output only the translation,
-> with no extra commentary, quotation marks, or explanations."
+- `build_filler_words()` — returns the `filler_words` dict passed to
+  `AgoraAgent(...)`. Uses `mode: "static"` with a shuffled phrase list. SDK
+  2.0.0 supports static mode only; LLM-generated fillers are not available in
+  this version.
+- `build_farewell()` — returns the `farewell_config` dict embedded in
+  `parameters`. Enables graceful exit with a 5-second window for the agent to
+  speak a farewell before leaving the channel.
 
 ## API (agent backend, port 8000)
 
 | Endpoint | Method | Description |
 | --- | --- | --- |
 | `/get_config` | GET | Token + channel/UID config |
-| `/startAgent` | POST | Start the translation agent session |
+| `/startAgent` | POST | Start the filler-words agent session |
 | `/stopAgent` | POST | Stop the agent by `agent_id` |
 
 The browser calls these as `/api/*`; Next rewrites them to `AGENT_BACKEND_URL`.

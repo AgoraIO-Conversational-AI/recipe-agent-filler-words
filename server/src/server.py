@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Agora Agent & Token Service — Translator Recipe
+Agora Agent & Token Service — Filler Words Recipe
 
 HTTP APIs:
 - GET  /get_config     -> Generate connection config
-- POST /startAgent     -> Start translation agent
+- POST /startAgent     -> Start agent
 - POST /stopAgent      -> Stop agent
 """
 import logging
@@ -59,9 +59,9 @@ except ValueError as e:
 
 # FastAPI application
 app = FastAPI(
-    title="Agora Translator Recipe Service",
+    title="Agora Filler Words Recipe Service",
     version="1.0.0",
-    description="Agora Conversational AI — real-time speech translation",
+    description="Agora Conversational AI — filler words and graceful exit",
 )
 
 app.add_middleware(
@@ -91,7 +91,7 @@ class StopAgentRequest(BaseModel):
 
 # API endpoints
 def _generate_channel_name() -> str:
-    return f"translator-{int(time.time())}-{random.randint(1000, 9999)}"
+    return f"filler-words-{int(time.time())}-{random.randint(1000, 9999)}"
 
 
 @router.get("/get_config")
@@ -142,7 +142,7 @@ async def get_config(
 
 @router.post("/startAgent")
 async def start_agent(request: StartAgentRequest):
-    """Start translation agent in a channel"""
+    """Start filler-words agent in a channel"""
     if agent is None:
         raise HTTPException(
             status_code=500,

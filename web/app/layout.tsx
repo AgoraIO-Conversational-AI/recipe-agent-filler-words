@@ -15,9 +15,9 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-	title: "Translator Recipe | Agora Conversational AI",
+	title: "Filler Words Recipe | Agora Conversational AI",
 	description:
-		"Recipe: real-time speech translation — speak the source language, hear the target.",
+		"Recipe: natural filler phrases during LLM latency and a graceful goodbye on hang-up.",
 	icons: {
 		icon: [
 			{ url: "/favicon.ico" },

@@ -1,17 +1,31 @@
-# Agora Agent Backend — Translator Recipe
+# Agora Agent Backend — Filler Words Recipe
 
 FastAPI service that owns Agora token generation and agent session lifecycle for
-the translator recipe. It is the service the web client reaches through the
+the filler words recipe. It is the service the web client reaches through the
 Next.js `/api/*` rewrite proxy (port 8000).
 
 ## What this service does
 
-Runs the translation pipeline using only Agora-managed vendors — **zero-key**:
+Runs the assistant pipeline using only Agora-managed vendors — **zero-key**:
 
-**Pipeline:** `DeepgramSTT(language=SOURCE_LANG)` → `OpenAI` (translate to `TARGET_LANG`) → `MiniMaxTTS(voice_id=TTS_VOICE)`
+**Pipeline:** `DeepgramSTT(nova-3)` → `OpenAI` (friendly assistant) → `MiniMaxTTS`
 
 The `OpenAI` vendor is Agora-managed (keyless by default). There is **no
 separate `llm/` service** in this recipe.
+
+### filler_words
+
+A static phrase list (defined in `server/src/filler_config.py`) is passed to
+`AgoraAgent` as `filler_words`. Agora plays a randomly selected phrase from the
+list while the LLM is generating a response, masking dead air. SDK 2.0.0
+supports `mode: "static"` only — LLM-generated fillers are not available in
+this version.
+
+### farewell_config
+
+Embedded in `parameters` passed to `AgoraAgent`. When the session is stopped,
+the agent speaks a farewell phrase and waits up to `graceful_timeout_seconds`
+(5 s) before leaving the channel.
 
 ## Run
 
@@ -36,15 +50,10 @@ Optional:
 
 | Variable | Default | Notes |
 | --- | :---: | --- |
-| `SOURCE_LANG` | `es` | Deepgram STT language code for the speaker |
-| `TARGET_LANG` | `English` | Language name used in the translation prompt |
-| `TTS_VOICE` | `English_captivating_female1` | MiniMax voice matching `TARGET_LANG` |
-| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for translation |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for the assistant |
 | `OPENAI_API_KEY` | — | BYO only — Agora manages the OpenAI key by default (keyless). Set only if your account requires it. |
+| `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
 | `AGENT_GREETING` | built-in | Optional opening line override |
-
-> Note: when you change `TARGET_LANG`, also pick a matching `TTS_VOICE` for
-> that target language.
 
 ## API
 

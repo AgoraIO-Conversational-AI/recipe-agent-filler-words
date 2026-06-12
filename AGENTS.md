@@ -1,13 +1,13 @@
 # Agent Development Guide
 
-For coding agents working in `recipe-agent-translator`. This repository is the
-**translator** recipe in the Agora Conversational AI recipes family.
+For coding agents working in `recipe-agent-filler-words`. This repository is the
+**filler words** recipe in the Agora Conversational AI recipes family.
 
 ## System shape
 
 - **`server/`** — Python FastAPI agent backend (:8000). Owns Agora token
   generation and agent session lifecycle. Uses the managed `OpenAI` vendor
-  (Agora-managed, keyless) for translation. SDK: `agora-agents>=2.0.0`
+  (Agora-managed, keyless) for the assistant. SDK: `agora-agents>=2.0.0`
   (`import agora_agent`).
 - **`web/`** — Next.js 16 / React 19 / TypeScript frontend (:3000).
 - Auth: Token007 from `AGORA_APP_ID` + `AGORA_APP_CERTIFICATE`.
@@ -15,7 +15,11 @@ For coding agents working in `recipe-agent-translator`. This repository is the
 
 ## Pipeline
 
-`DeepgramSTT(language=SOURCE_LANG)` → `OpenAI` (translates to `TARGET_LANG`) → `MiniMaxTTS(voice=TTS_VOICE)`
+`DeepgramSTT(nova-3)` → `OpenAI` (friendly assistant) → `MiniMaxTTS`
+
+With:
+- `filler_words`: static phrase list played during LLM latency (mode: "static"; SDK 2.0.0 only supports static)
+- `farewell_config`: graceful exit before the agent leaves on stop
 
 ## Routing / ownership
 
@@ -23,7 +27,7 @@ For coding agents working in `recipe-agent-translator`. This repository is the
 - Browser-facing `/api/*` paths are Next rewrites (`web/next.config.ts`) to the
   agent backend; do not add `web/app/api/**/route.ts` for agent/token logic.
 - Token generation and agent lifecycle live in `server/src/`.
-- Translation prompt builder lives in `server/src/translation_config.py`.
+- Filler-words and farewell builders live in `server/src/filler_config.py`.
 
 ## Supported modes
 
@@ -39,18 +43,19 @@ For coding agents working in `recipe-agent-translator`. This repository is the
 |---|---|---|
 | `AGORA_APP_ID` | — | required |
 | `AGORA_APP_CERTIFICATE` | — | required |
-| `SOURCE_LANG` | `es` | Deepgram STT language code |
-| `TARGET_LANG` | `English` | Language name for translation prompt |
-| `TTS_VOICE` | `English_captivating_female1` | MiniMax voice matching `TARGET_LANG` |
-| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for translation |
+| `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for the assistant |
 | `OPENAI_API_KEY` | — | optional — BYO only if your account requires it |
+| `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
+| `AGENT_GREETING` | built-in | Optional opening line override |
 
 ## Patterns
 
 - Keep the web client calling `/api/*`; hide backend placement behind Next rewrites.
 - Keep token generation and the App Certificate in `server/`.
 - `OPENAI_API_KEY` is optional: Agora manages the OpenAI key by default (keyless).
-- Changing `TARGET_LANG` means also picking a matching target-language `TTS_VOICE`.
+- Edit `FILLER_PHRASES` in `server/src/filler_config.py` to customise the filler list.
+- `build_filler_words()` and `build_farewell()` are pure functions — test them
+  without any agora_agent import.
 
 ## Anti-patterns
 
@@ -59,6 +64,8 @@ For coding agents working in `recipe-agent-translator`. This repository is the
 - Do not put `PORT` in `server/.env.example` (it would clobber the random port
   that `verify:local:fastapi` injects via `load_dotenv(override=True)`).
 - Do not link to `docs/ai/` — that progressive-disclosure tree is not present yet.
+- Do not set `filler_words` mode to anything other than `"static"` — the SDK
+  2.0.0 only supports static mode.
 
 ## Commands
 
@@ -90,4 +97,4 @@ Narrower checks: `bun run verify:backend`, `bun run verify:local:fastapi`,
   tense.
 - No AI tool names in commit messages or PR descriptions. No `Co-Authored-By`
   trailers. No `--no-verify`. No git config changes.
-- Branch names: `type/short-description` (e.g. `feat/add-language-selector`).
+- Branch names: `type/short-description` (e.g. `feat/add-filler-phrases`).
