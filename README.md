@@ -12,16 +12,6 @@ own account).
 
 **Pipeline:** `DeepgramSTT(nova-3)` → `OpenAI` (friendly assistant) → `MiniMaxTTS`
 
-## Key features
-
-- **filler_words** — a static phrase list (`mode: "static"`) is played while
-  the LLM is generating a response, keeping dead air away. LLM-generated
-  fillers are not supported in the current SDK version (2.0.0); static phrases
-  are the supported mode.
-- **farewell_config** — graceful exit: the agent speaks a farewell before
-  leaving the channel on stop (`graceful_enabled: true`,
-  `graceful_timeout_seconds: 5`).
-
 ## Prerequisites
 
 - [Python 3.10+](https://www.python.org/)
