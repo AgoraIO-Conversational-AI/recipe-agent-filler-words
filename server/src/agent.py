@@ -96,6 +96,7 @@ class Agent:
         tts = MiniMaxTTS(model="speech_2_6_turbo", voice_id=self.tts_voice)
 
         parameters = {
+            "audio_scenario": "chorus",  # web client — ultra-low-latency chorus profile
             "data_channel": "rtm",
             "enable_error_message": True,
             "enable_metrics": True,
