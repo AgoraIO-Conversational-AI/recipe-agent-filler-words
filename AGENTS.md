@@ -7,7 +7,7 @@ For coding agents working in `recipe-agent-filler-words`. This repository is the
 
 - **`server/`** — Python FastAPI agent backend (:8000). Owns Agora token
   generation and agent session lifecycle. Uses the managed `OpenAI` vendor
-  (Agora-managed, keyless) for the assistant. SDK: `agora-agents>=2.0.0`
+  (Agora-managed, keyless) for the assistant. SDK: `agora-agents>=2.3.0`
   (`import agora_agent`).
 - **`web/`** — Next.js 16 / React 19 / TypeScript frontend (:3000).
 - Auth: Token007 from `AGORA_APP_ID` + `AGORA_APP_CERTIFICATE`.
@@ -65,7 +65,7 @@ With:
   that `verify:local:fastapi` injects via `load_dotenv(override=True)`).
 - Do not link to `docs/ai/` — that progressive-disclosure tree is not present yet.
 - Do not set `filler_words` mode to anything other than `"static"` — the SDK
-  2.0.0 only supports static mode.
+  only supports static mode.
 
 ## Commands
 
