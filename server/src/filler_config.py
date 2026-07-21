@@ -2,7 +2,7 @@
 
 FILLER_PHRASES = [
     "Let me think about that for a second.",
-    "Good question — one moment.",
+    "Good question - one moment.",
     "Hmm, let me check.",
     "Sure, give me just a sec.",
     "Right, let me look into that.",
