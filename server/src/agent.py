@@ -10,7 +10,7 @@ OpenAI is Agora-managed (keyless by default). OPENAI_API_KEY is optional — set
 it only if your account requires a BYO key.
 
 Features:
-  - filler_words: static phrase list played during LLM latency gaps
+  - filler_words: static or Engine 2.12 LLM-generated phrases during latency gaps
   - farewell_config: graceful exit before the agent leaves on stop
 """
 import logging
@@ -28,6 +28,7 @@ AGENT_SYSTEM_PROMPT = (
     "You are a friendly, concise voice assistant. "
     "Keep replies to one or two sentences."
 )
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1/chat/completions"
 
 
 class Agent:
@@ -37,8 +38,11 @@ class Agent:
 
     Uses the managed OpenAI vendor (Agora-managed, keyless) for conversation.
     Filler phrases are played during LLM latency so the experience feels natural.
+    Static mode is the default; generated mode is enabled explicitly with
+    ``FILLER_WORDS_MODE=generated`` and uses an OpenAI-compatible provider owned
+    by Agora Engine.
     A farewell_config ensures the agent says goodbye gracefully before stopping.
-    No custom LLM endpoint or public tunnel is required.
+    Static mode requires no custom LLM endpoint or public tunnel.
     """
 
     def __init__(self):
@@ -51,6 +55,7 @@ class Agent:
 
         # OpenAI is Agora-managed (keyless), like Deepgram/MiniMax. OPENAI_API_KEY is optional.
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
+        self.openai_base_url = os.getenv("OPENAI_BASE_URL")
         self.openai_model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         self.tts_voice = os.getenv("TTS_VOICE", "English_captivating_female1")
 
@@ -83,6 +88,13 @@ class Agent:
 
         llm = OpenAI(
             api_key=self.openai_api_key,
+            # The SDK requires an explicit endpoint for BYO keys. Keep the
+            # managed/keyless path unchanged and default BYO to OpenAI.
+            base_url=(
+                self.openai_base_url or DEFAULT_OPENAI_BASE_URL
+                if self.openai_api_key
+                else None
+            ),
             model=self.openai_model,
             system_messages=[{"role": "system", "content": AGENT_SYSTEM_PROMPT}],
             greeting_message=self.greeting,
@@ -127,6 +139,7 @@ class Agent:
             },
             advanced_features={"enable_rtm": True},
             parameters=parameters,
+            # Resolve Engine-managed or optional BYO filler settings per session.
             filler_words=build_filler_words(),
         )
 

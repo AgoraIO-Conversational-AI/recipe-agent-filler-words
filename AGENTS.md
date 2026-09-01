@@ -18,7 +18,7 @@ For coding agents working in `recipe-agent-filler-words`. This repository is the
 `DeepgramSTT(nova-3)` → `OpenAI` (friendly assistant) → `MiniMaxTTS`
 
 With:
-- `filler_words`: static phrase list played during LLM latency (mode: "static"; SDK 2.0.0 only supports static)
+- `filler_words`: built-in static phrases by default, or Engine 2.12 generated phrases with static fallback
 - `farewell_config`: graceful exit before the agent leaves on stop
 
 ## Routing / ownership
@@ -47,6 +47,10 @@ With:
 | `OPENAI_API_KEY` | — | optional — BYO only if your account requires it |
 | `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
 | `AGENT_GREETING` | built-in | Optional opening line override |
+| `FILLER_WORDS_MODE` | `static` | `static` or `generated` |
+| `FILLER_LLM_BASE_URL` | — | Optional BYO provider URL; set all `FILLER_LLM_*` fields together |
+| `FILLER_LLM_API_KEY` | — | Optional BYO provider key; keep secret |
+| `FILLER_LLM_MODEL` | — | Optional BYO provider model |
 
 ## Patterns
 
@@ -64,8 +68,9 @@ With:
 - Do not put `PORT` in `server/.env.example` (it would clobber the random port
   that `verify:local:fastapi` injects via `load_dotenv(override=True)`).
 - Do not link to `docs/ai/` — that progressive-disclosure tree is not present yet.
-- Do not set `filler_words` mode to anything other than `"static"` — the SDK
-  only supports static mode.
+- Generated mode uses the App ID's Engine-managed generator when no
+  `FILLER_LLM_*` fields are set. An optional BYO provider must be public and all
+  three provider fields must be set together.
 
 ## Commands
 

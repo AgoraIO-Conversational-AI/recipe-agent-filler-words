@@ -15,11 +15,17 @@ separate `llm/` service** in this recipe.
 
 ### filler_words
 
-A static phrase list (defined in `server/src/filler_config.py`) is passed to
-`AgoraAgent` as `filler_words`. Agora plays a randomly selected phrase from the
-list while the LLM is generating a response, masking dead air. SDK 2.0.0
-supports `mode: "static"` only — LLM-generated fillers are not available in
-this version.
+The builder in `server/src/filler_config.py` is passed to `AgoraAgent` as
+`filler_words`. Static mode (the default) plays a randomly selected phrase from
+the built-in list while the LLM is generating a response. Set
+`FILLER_WORDS_MODE=generated` to use the Engine 2.12 generated filler
+configuration. By default, Engine uses the generator provisioned for the App
+ID in parallel with the main business LLM and falls back to the static list if
+generation is not ready, fails, or returns empty text.
+
+Developers can override the Engine-managed generator with a public
+OpenAI-compatible provider by setting all three `FILLER_LLM_*` fields. The
+backend only sends this configuration; Engine calls the provider directly.
 
 ### farewell_config
 
@@ -53,8 +59,18 @@ Optional:
 | --- | :---: | --- |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for the assistant |
 | `OPENAI_API_KEY` | — | BYO only — Agora manages the OpenAI key by default (keyless). Set only if your account requires it. |
+| `FILLER_WORDS_MODE` | `static` | `static` or `generated`. |
+| `FILLER_LLM_BASE_URL` | — | Optional BYO provider URL; set all three `FILLER_LLM_*` fields together. |
+| `FILLER_LLM_API_KEY` | — | Optional BYO provider key used by Engine. |
+| `FILLER_LLM_MODEL` | — | Optional BYO provider model. |
 | `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
 | `AGENT_GREETING` | built-in | Optional opening line override |
+
+Generated mode uses the built-in prompt and the App ID's Engine-managed
+generator when no provider fields are set. Otherwise, set all three fields to a
+third-party public OpenAI-compatible provider. Use ngrok or another HTTPS tunnel
+only when that provider runs locally; Agora Engine cannot call `localhost`.
+Generated fillers use a fixed 1500 ms response-wait trigger.
 
 ## API
 
