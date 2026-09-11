@@ -7,8 +7,9 @@ For coding agents working in `recipe-agent-filler-words`. This repository is the
 
 - **`server/`** — Python FastAPI agent backend (:8000). Owns Agora token
   generation and agent session lifecycle. Uses the managed `OpenAI` vendor
-  (Agora-managed, keyless) for the assistant. SDK: `agora-agents>=2.3.0`
-  (`import agora_agent`).
+  (Agora-managed, keyless) for the assistant. SDK: `agora-agents`
+  (`import agora_agent`); the dependency version is defined in
+  `server/requirements.txt`.
 - **`web/`** — Next.js 16 / React 19 / TypeScript frontend (:3000).
 - Auth: Token007 from `AGORA_APP_ID` + `AGORA_APP_CERTIFICATE`.
 - No `llm/` service — OpenAI is Agora-managed (zero-key by default).
