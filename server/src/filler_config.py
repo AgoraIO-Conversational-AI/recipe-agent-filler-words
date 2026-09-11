@@ -5,6 +5,7 @@ builds the join payload and never makes an LLM request itself.
 """
 
 import os
+from urllib.parse import urlsplit, urlunsplit
 
 FILLER_PHRASES = [
     "Let me think about that for a second.",
@@ -41,10 +42,11 @@ def build_static_filler_words() -> dict:
 
 def _chat_completions_url(base_url: str) -> str:
     """Accept a provider base URL or a full chat-completions endpoint."""
-    normalized = base_url.rstrip("/")
-    if normalized.endswith("/chat/completions"):
-        return normalized
-    return f"{normalized}/chat/completions"
+    parsed = urlsplit(base_url.strip())
+    path = parsed.path.rstrip("/")
+    if not path.endswith("/chat/completions"):
+        path = f"{path}/chat/completions"
+    return urlunsplit(parsed._replace(path=path))
 
 
 def build_generated_filler_words(

@@ -89,6 +89,30 @@ def test_generated_filler_appends_chat_completions_to_provider_url():
     assert provider["url"] == "https://api.deepseek.com/chat/completions"
 
 
+@pytest.mark.parametrize(
+    ("base_url", "expected"),
+    [
+        (
+            "https://example.azure.com/openai/deployments/demo?api-version=2026-01-01",
+            "https://example.azure.com/openai/deployments/demo/chat/completions?api-version=2026-01-01",
+        ),
+        (
+            "https://example.azure.com/chat/completions?api-version=2026-01-01",
+            "https://example.azure.com/chat/completions?api-version=2026-01-01",
+        ),
+    ],
+)
+def test_generated_filler_preserves_provider_url_query(base_url, expected):
+    payload = fc.build_generated_filler_words(
+        base_url=base_url,
+        api_key="test-filler-key",
+        model="test-model",
+    )
+
+    provider = payload["content"]["generated_config"]["llm_provider"]
+    assert provider["url"] == expected
+
+
 def test_farewell_payload_graceful():
     fw = fc.build_farewell()
     assert fw["graceful_enabled"] is True

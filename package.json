@@ -27,8 +27,9 @@
     "verify:web:proxy": "cd web && bun run scripts/verify-local-proxy.ts",
     "verify:web:build": "cd web && bun run build",
     "verify:backend": "bun scripts/tasks.ts verify-backend",
+    "verify:backend:pytest": "bun scripts/tasks.ts verify-backend-pytest",
     "verify:local:fastapi": "cd web && bun run scripts/verify-local-fastapi.ts",
-    "verify:local": "bun run doctor:local && bun run verify:backend && bun run verify:local:fastapi && bun run verify:web:proxy && bun run verify:web:build",
+    "verify:local": "bun run doctor:local && bun run verify:backend && bun run verify:backend:pytest && bun run verify:local:fastapi && bun run verify:web:proxy && bun run verify:web:build",
     "clean": "bun scripts/tasks.ts clean"
   },
   "devDependencies": {

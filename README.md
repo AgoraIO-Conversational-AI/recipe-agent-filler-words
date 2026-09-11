@@ -100,6 +100,7 @@ bun run doctor           # prerequisite check (no creds needed)
 bun run doctor:local     # + .env.local + credentials checks
 
 bun run verify           # web-only gate (no Agora creds needed)
+bun run verify:backend:pytest # standalone backend tests, no Agora cloud calls
 bun run verify:local     # full local gate: backend compile + smoke tests + web build
 bun run clean            # remove venvs and build artifacts
 ```
@@ -110,7 +111,7 @@ Tests run standalone (no Agora cloud needed): `pytest` in `server/`, plus
 To verify generated filler configuration locally without cloud credentials:
 
 ```bash
-server/venv/bin/python -m pytest -q server/tests
+bun run verify:backend:pytest
 ```
 
 For an end-to-end check with an App ID that has an Engine generator provisioned,
