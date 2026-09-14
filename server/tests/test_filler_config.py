@@ -17,20 +17,13 @@ def test_filler_words_payload_static_with_phrases(monkeypatch):
 
 def test_filler_words_payload_generated_with_static_fallback(monkeypatch):
     monkeypatch.setenv("FILLER_WORDS_MODE", "generated")
-    monkeypatch.setenv("FILLER_LLM_BASE_URL", "https://api.openai.com/v1")
-    monkeypatch.setenv("FILLER_LLM_API_KEY", "test-filler-key")
-    monkeypatch.setenv("FILLER_LLM_MODEL", "test-model")
 
     payload = fc.build_filler_words()
     content = payload["content"]
-    provider = content["generated_config"]["llm_provider"]
 
     assert content["mode"] == "generated"
     assert content["static_config"]["phrases"]
-    assert provider["api_key"] == "test-filler-key"
-    assert provider["url"] == "https://api.openai.com/v1/chat/completions"
-    assert "base_url" not in provider
-    assert provider["params"] == {"model": "test-model"}
+    assert "llm_provider" not in content["generated_config"]
     assert content["generated_config"]["prompt"] == fc.DEFAULT_GENERATED_PROMPT
     assert content["generated_config"]["fallback_strategy"] == "static"
 
@@ -47,8 +40,9 @@ def test_generated_filler_uses_engine_provider_by_default(monkeypatch):
     assert content["generated_config"]["fallback_strategy"] == "static"
 
 
-def test_generated_filler_sets_fixed_time_trigger():
-    payload = fc.build_generated_filler_words()
+@pytest.mark.parametrize("mode", ["static", "generated"])
+def test_both_filler_modes_use_default_wait_threshold(mode):
+    payload = fc.build_filler_words(mode)
 
     assert payload["trigger"] == {
         "mode": "fixed_time",
@@ -64,53 +58,25 @@ def test_generated_filler_prompt_is_not_configured_from_environment(monkeypatch)
     assert content["generated_config"]["prompt"] == fc.DEFAULT_GENERATED_PROMPT
 
 
-def test_generated_filler_rejects_partial_explicit_provider(monkeypatch):
-    monkeypatch.setenv("FILLER_LLM_BASE_URL", "https://api.deepseek.com")
-    monkeypatch.delenv("FILLER_LLM_API_KEY", raising=False)
-    monkeypatch.delenv("FILLER_LLM_MODEL", raising=False)
+@pytest.mark.parametrize("legacy_fields", [
+    {"FILLER_LLM_BASE_URL": "https://example.com/v1"},
+    {
+        "FILLER_LLM_BASE_URL": "https://example.com/v1",
+        "FILLER_LLM_API_KEY": "unused-legacy-key",
+        "FILLER_LLM_MODEL": "unused-legacy-model",
+    },
+])
+def test_generated_filler_ignores_legacy_provider_environment(monkeypatch, legacy_fields):
+    for name, value in legacy_fields.items():
+        monkeypatch.setenv(name, value)
 
-    with pytest.raises(ValueError, match="requires .* together"):
-        fc.build_generated_filler_words()
+    content = fc.build_generated_filler_words()["content"]
+    assert "llm_provider" not in content["generated_config"]
 
 
 def test_filler_words_rejects_unknown_mode():
     with pytest.raises(ValueError, match="FILLER_WORDS_MODE"):
         fc.build_filler_words("unsupported")
-
-
-def test_generated_filler_appends_chat_completions_to_provider_url():
-    payload = fc.build_generated_filler_words(
-        base_url="https://api.deepseek.com/",
-        api_key="test-filler-key",
-        model="test-model",
-    )
-
-    provider = payload["content"]["generated_config"]["llm_provider"]
-    assert provider["url"] == "https://api.deepseek.com/chat/completions"
-
-
-@pytest.mark.parametrize(
-    ("base_url", "expected"),
-    [
-        (
-            "https://example.azure.com/openai/deployments/demo?api-version=2026-01-01",
-            "https://example.azure.com/openai/deployments/demo/chat/completions?api-version=2026-01-01",
-        ),
-        (
-            "https://example.azure.com/chat/completions?api-version=2026-01-01",
-            "https://example.azure.com/chat/completions?api-version=2026-01-01",
-        ),
-    ],
-)
-def test_generated_filler_preserves_provider_url_query(base_url, expected):
-    payload = fc.build_generated_filler_words(
-        base_url=base_url,
-        api_key="test-filler-key",
-        model="test-model",
-    )
-
-    provider = payload["content"]["generated_config"]["llm_provider"]
-    assert provider["url"] == expected
 
 
 def test_farewell_payload_graceful():

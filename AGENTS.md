@@ -48,10 +48,7 @@ With:
 | `OPENAI_API_KEY` | — | optional — BYO only if your account requires it |
 | `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
 | `AGENT_GREETING` | built-in | Optional opening line override |
-| `FILLER_WORDS_MODE` | `static` | `static` or `generated` |
-| `FILLER_LLM_BASE_URL` | — | Optional BYO provider URL; set all `FILLER_LLM_*` fields together |
-| `FILLER_LLM_API_KEY` | — | Optional BYO provider key; keep secret |
-| `FILLER_LLM_MODEL` | — | Optional BYO provider model |
+| `FILLER_WORDS_MODE` | `static` | Initial web selection (via `/filler_config`) and default when `/startAgent` omits `fillerWordsMode` |
 
 ## Patterns
 
@@ -59,6 +56,11 @@ With:
 - Keep token generation and the App Certificate in `server/`.
 - `OPENAI_API_KEY` is optional: Agora manages the OpenAI key by default (keyless).
 - Edit `FILLER_PHRASES` in `server/src/filler_config.py` to customise the filler list.
+- Read `/api/filler_config` before enabling the mode selector. Use the backend's
+  `default_mode` for the initial selection and preserve later user selections.
+- Both modes use `FILLER_RESPONSE_WAIT_MS = 1500`, matching the Engine default.
+  Primary LLM content before the deadline cancels the filler; generated content
+  that is not ready at the deadline uses the static fallback.
 - `build_filler_words()` and `build_farewell()` are pure functions — test them
   without any agora_agent import.
 
@@ -69,9 +71,9 @@ With:
 - Do not put `PORT` in `server/.env.example` (it would clobber the random port
   that `verify:local:fastapi` injects via `load_dotenv(override=True)`).
 - Do not link to `docs/ai/` — that progressive-disclosure tree is not present yet.
-- Generated mode uses the App ID's Engine-managed generator when no
-  `FILLER_LLM_*` fields are set. An optional BYO provider must be public and all
-  three provider fields must be set together.
+- Generated mode omits `llm_provider` and uses the SDK's default Engine-managed
+  generator. Do not require filler provider configuration; legacy `FILLER_LLM_*`
+  variables are ignored.
 
 ## Commands
 

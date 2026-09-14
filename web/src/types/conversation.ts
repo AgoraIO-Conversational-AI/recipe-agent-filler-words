@@ -1,5 +1,7 @@
 import type { RTMClient } from 'agora-rtm';
 
+export type FillerWordsMode = 'static' | 'generated';
+
 /** Session bootstrap from GET /api/get_config (channel + tokens + agent identity). */
 export interface AgoraTokenData {
   token: string;

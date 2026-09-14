@@ -17,15 +17,18 @@ separate `llm/` service** in this recipe.
 
 The builder in `server/src/filler_config.py` is passed to `AgoraAgent` as
 `filler_words`. Static mode (the default) plays a randomly selected phrase from
-the built-in list while the LLM is generating a response. Set
-`FILLER_WORDS_MODE=generated` to use the Engine 2.12 generated filler
-configuration. By default, Engine uses the generator provisioned for the App
-ID in parallel with the main business LLM and falls back to the static list if
-generation is not ready, fails, or returns empty text.
+the built-in list while the LLM is generating a response. Choose **Generated**
+in the web UI or send `"fillerWordsMode": "generated"` to `/startAgent` to use
+Engine 2.12 generated fillers. The SDK's default Engine-managed generator runs
+in parallel with the main business LLM and falls back to the static list if
+generation is not ready, fails, or returns empty text. No filler provider URL,
+API key, or model is needed.
 
-Developers can override the Engine-managed generator with a public
-OpenAI-compatible provider by setting all three `FILLER_LLM_*` fields. The
-backend only sends this configuration; Engine calls the provider directly.
+`FILLER_WORDS_MODE` supplies the initial web selection and the mode for requests
+that omit `fillerWordsMode`; it defaults to `static`. The web app reads the
+default through `/filler_config` before enabling its mode selector. Each start
+request's selection takes precedence without affecting other sessions. Restart
+the backend and refresh the page after changing this environment variable.
 
 ### farewell_config
 
@@ -59,23 +62,30 @@ Optional:
 | --- | :---: | --- |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for the assistant |
 | `OPENAI_API_KEY` | — | BYO only — Agora manages the OpenAI key by default (keyless). Set only if your account requires it. |
-| `FILLER_WORDS_MODE` | `static` | `static` or `generated`. |
-| `FILLER_LLM_BASE_URL` | — | Optional BYO provider URL; set all three `FILLER_LLM_*` fields together. |
-| `FILLER_LLM_API_KEY` | — | Optional BYO provider key used by Engine. |
-| `FILLER_LLM_MODEL` | — | Optional BYO provider model. |
+| `FILLER_WORDS_MODE` | `static` | Initial web selection and default when a start request omits `fillerWordsMode`; `static` or `generated`. |
 | `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
 | `AGENT_GREETING` | built-in | Optional opening line override |
 
-Generated mode uses the built-in prompt and the App ID's Engine-managed
-generator when no provider fields are set. Otherwise, set all three fields to a
-third-party public OpenAI-compatible provider. Use ngrok or another HTTPS tunnel
-only when that provider runs locally; Agora Engine cannot call `localhost`.
-Generated fillers use a fixed 1500 ms response-wait trigger.
+Generated mode uses the built-in prompt and the SDK's default Engine-managed
+generator. Legacy `FILLER_LLM_*` variables are ignored and can be removed.
+Both modes use a 1500 ms response-wait trigger, matching the Engine default and
+configured by `FILLER_RESPONSE_WAIT_MS` in `src/filler_config.py`. If the primary
+LLM responds before the deadline, no filler plays. In Generated mode, generation
+runs in parallel with the primary LLM; if no generated phrase is ready at the
+deadline, Engine plays a static fallback and cancels the pending generation.
+A shorter wait makes static fallback more likely.
+
+Startup logs include the selected mode and threshold. Restart the backend and
+start a new conversation after changes. No custom endpoint or public tunnel is
+required.
 
 ## API
 
+- `GET /filler_config` — public defaults as `data.default_mode`; no token or
+  session is created
 - `GET /get_config` — token + channel/UID config
-- `POST /startAgent` — start an agent session
+- `POST /startAgent` — start an agent session; optional `fillerWordsMode` accepts
+  `static` or `generated` (invalid values return HTTP 422)
 - `POST /stopAgent` — stop an agent session
 
 The repo-root `bun run verify:local:fastapi` exercises these routes through the

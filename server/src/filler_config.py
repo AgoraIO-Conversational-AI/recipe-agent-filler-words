@@ -5,7 +5,9 @@ builds the join payload and never makes an LLM request itself.
 """
 
 import os
-from urllib.parse import urlsplit, urlunsplit
+
+# Match Engine's default wait. A primary LLM response before this deadline wins.
+FILLER_RESPONSE_WAIT_MS = 1500
 
 FILLER_PHRASES = [
     "Let me think about that for a second.",
@@ -20,16 +22,15 @@ DEFAULT_GENERATED_PROMPT = (
     "Generate one short conversational filler phrase based on the user's last "
     "message. Do not answer the user or add punctuation beyond the phrase."
 )
-FILLER_PROVIDER_ENV_VARS = (
-    "FILLER_LLM_BASE_URL",
-    "FILLER_LLM_API_KEY",
-    "FILLER_LLM_MODEL",
-)
 
 
 def build_static_filler_words() -> dict:
     return {
         "enable": True,
+        "trigger": {
+            "mode": "fixed_time",
+            "fixed_time_config": {"response_wait_ms": FILLER_RESPONSE_WAIT_MS},
+        },
         "content": {
             "mode": "static",
             "static_config": {
@@ -40,82 +41,27 @@ def build_static_filler_words() -> dict:
     }
 
 
-def _chat_completions_url(base_url: str) -> str:
-    """Accept a provider base URL or a full chat-completions endpoint."""
-    parsed = urlsplit(base_url.strip())
-    path = parsed.path.rstrip("/")
-    if not path.endswith("/chat/completions"):
-        path = f"{path}/chat/completions"
-    return urlunsplit(parsed._replace(path=path))
-
-
 def build_generated_filler_words(
     *,
-    base_url: str | None = None,
-    api_key: str | None = None,
-    model: str | None = None,
     prompt: str | None = None,
 ) -> dict:
-    """Build Engine 2.12 generated filler config.
-
-    With no provider settings, Engine uses the generator provisioned for the
-    App ID. Setting all FILLER_LLM_* fields selects a developer-provided
-    OpenAI-compatible endpoint instead.
-    """
+    """Build generated fillers using the SDK's default Engine-managed provider."""
     resolved_prompt = (prompt or DEFAULT_GENERATED_PROMPT).strip()
 
-    provider_values = {
-        "FILLER_LLM_BASE_URL": (
-            base_url if base_url is not None else os.getenv("FILLER_LLM_BASE_URL")
-        ),
-        "FILLER_LLM_API_KEY": (
-            api_key if api_key is not None else os.getenv("FILLER_LLM_API_KEY")
-        ),
-        "FILLER_LLM_MODEL": (
-            model if model is not None else os.getenv("FILLER_LLM_MODEL")
-        ),
-    }
-    provider_values = {
-        name: (value or "").strip() for name, value in provider_values.items()
-    }
-    configured_fields = [name for name, value in provider_values.items() if value]
-    if configured_fields and len(configured_fields) != len(FILLER_PROVIDER_ENV_VARS):
-        missing_fields = [
-            name for name in FILLER_PROVIDER_ENV_VARS if not provider_values[name]
-        ]
-        raise ValueError(
-            "Explicit generated filler provider requires "
-            "FILLER_LLM_BASE_URL, FILLER_LLM_API_KEY, and FILLER_LLM_MODEL "
-            f"together; missing {', '.join(missing_fields)}"
-        )
-
+    # Omit llm_provider so the SDK uses Engine's default generator settings.
     generated_config = {
         "prompt": resolved_prompt,
         "fallback_strategy": "static",
     }
-    if configured_fields:
-        generated_config["llm_provider"] = {
-            "url": _chat_completions_url(provider_values["FILLER_LLM_BASE_URL"]),
-            "api_key": provider_values["FILLER_LLM_API_KEY"],
-            "params": {"model": provider_values["FILLER_LLM_MODEL"]},
-        }
 
-    return {
-        "enable": True,
-        "trigger": {
-            "mode": "fixed_time",
-            "fixed_time_config": {"response_wait_ms": 1500},
-        },
-        "content": {
-            "mode": "generated",
-            # Generated mode requires static phrases as its fallback.
-            "static_config": {
-                "phrases": list(FILLER_PHRASES),
-                "selection_rule": "shuffle",
-            },
-            "generated_config": generated_config,
-        },
-    }
+    # Share the same trigger and phrase list with static mode. Generated mode
+    # uses these phrases as its fallback when generation misses the deadline.
+    filler_words = build_static_filler_words()
+    filler_words["content"].update({
+        "mode": "generated",
+        "generated_config": generated_config,
+    })
+    return filler_words
 
 
 def build_filler_words(mode: str | None = None) -> dict:

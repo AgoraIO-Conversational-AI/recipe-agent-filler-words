@@ -1,3 +1,5 @@
+import type { FillerWordsMode } from '../types/conversation'
+
 const API_BASE_URL = '/api'
 
 export interface GetConfigResponse {
@@ -34,8 +36,25 @@ export async function getConfig(options?: { channel?: string; uid?: string | num
   return result.data
 }
 
-export async function startAgent(channelName: string, rtcUid: number, userUid: number): Promise<string> {
-  const payload = { channelName, rtcUid, userUid }
+export async function getFillerConfig(): Promise<{ default_mode: FillerWordsMode }> {
+  const response = await fetch(`${API_BASE_URL}/filler_config`, { method: 'GET', cache: 'no-store' })
+  const result = await response.json()
+  if (!response.ok || result.code !== 0) {
+    throw new Error(result.detail || result.msg || 'Failed to load filler settings')
+  }
+  if (result.data?.default_mode !== 'static' && result.data?.default_mode !== 'generated') {
+    throw new Error('Invalid default filler mode')
+  }
+  return result.data
+}
+
+export async function startAgent(
+  channelName: string,
+  rtcUid: number,
+  userUid: number,
+  fillerWordsMode?: FillerWordsMode,
+): Promise<string> {
+  const payload = { channelName, rtcUid, userUid, fillerWordsMode }
 
   const response = await fetch(`${API_BASE_URL}/startAgent`, {
     method: 'POST',

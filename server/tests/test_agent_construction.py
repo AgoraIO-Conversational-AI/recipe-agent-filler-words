@@ -6,7 +6,9 @@ exercises AgoraAgent construction — the exact path that agora-agents 2.3.x cha
 import asyncio
 import sys
 
-from filler_config import build_generated_filler_words
+import pytest
+
+from filler_config import build_filler_words
 
 
 def _fresh_agent_module():
@@ -47,9 +49,17 @@ def test_start_constructs_real_agent_and_returns_shape(fake_env, monkeypatch):
     assert captured["filler_words"]["content"]["mode"] == "static"
 
 
-def test_start_passes_generated_filler_config_to_engine(fake_env, monkeypatch):
+@pytest.mark.parametrize(("default_mode", "requested_mode", "expected_mode"), [
+    ("static", "generated", "generated"),
+    ("generated", "static", "static"),
+    ("generated", None, "generated"),
+    ("static", None, "static"),
+])
+def test_start_passes_session_filler_mode_to_engine(
+    fake_env, monkeypatch, default_mode, requested_mode, expected_mode,
+):
     agent = _fresh_agent_module()
-    monkeypatch.setenv("FILLER_WORDS_MODE", "generated")
+    monkeypatch.setenv("FILLER_WORDS_MODE", default_mode)
     for name in ("FILLER_LLM_BASE_URL", "FILLER_LLM_API_KEY", "FILLER_LLM_MODEL"):
         monkeypatch.delenv(name, raising=False)
     captured = {}
@@ -65,44 +75,24 @@ def test_start_passes_generated_filler_config_to_engine(fake_env, monkeypatch):
     from agora_agent.agentkit import Agent as AgoraAgent
     monkeypatch.setattr(AgoraAgent, "create_async_session", fake_create_async_session)
 
-    result = asyncio.run(agent.Agent().start(channel_name="ch", agent_uid=111, user_uid=222))
+    result = asyncio.run(agent.Agent().start(
+        channel_name="ch", agent_uid=111, user_uid=222,
+        filler_words_mode=requested_mode,
+    ))
 
-    generated = captured["filler_words"]["content"]
+    content = captured["filler_words"]["content"]
     assert result["agent_id"] == "test-generated-agent-id"
-    assert generated["mode"] == "generated"
-    assert "llm_provider" not in generated["generated_config"]
-    assert generated["static_config"]["phrases"]
+    assert content["mode"] == expected_mode
+    assert content["static_config"]["phrases"]
+    if expected_mode == "generated":
+        assert "llm_provider" not in content["generated_config"]
 
 
-def test_generated_filler_uses_sdk_provider_url():
+@pytest.mark.parametrize("mode", ["static", "generated"])
+def test_filler_trigger_survives_sdk_serialization(mode):
     from agora_agent.agentkit import Agent as AgoraAgent
 
-    filler_words = build_generated_filler_words(
-        base_url="https://api.deepseek.com",
-        api_key="test-filler-key",
-        model="test-model",
-    )
-    properties = AgoraAgent(object(), filler_words=filler_words).to_properties(
-        channel="test-channel",
-        agent_uid="1",
-        remote_uids=[],
-        token="test-token",
-        allow_missing_vendor_categories={"asr", "llm", "tts"},
-    )
-    provider = properties.filler_words.content.generated_config.llm_provider
-    serialized = provider.model_dump(exclude_none=True)
-
-    assert serialized["url"] == "https://api.deepseek.com/chat/completions"
-    assert "base_url" not in serialized
-
-
-def test_generated_filler_supports_engine_provider_in_current_sdk(monkeypatch):
-    from agora_agent.agentkit import Agent as AgoraAgent
-
-    for name in ("FILLER_LLM_BASE_URL", "FILLER_LLM_API_KEY", "FILLER_LLM_MODEL"):
-        monkeypatch.delenv(name, raising=False)
-
-    filler_words = build_generated_filler_words(prompt="Generate one short filler")
+    filler_words = build_filler_words(mode)
     properties = AgoraAgent(object(), filler_words=filler_words).to_properties(
         channel="test-channel",
         agent_uid="1",
@@ -111,6 +101,11 @@ def test_generated_filler_supports_engine_provider_in_current_sdk(monkeypatch):
         allow_missing_vendor_categories={"asr", "llm", "tts"},
     )
 
-    generated = properties.filler_words.content.generated_config
-    assert generated.llm_provider is None
-    assert generated.prompt == "Generate one short filler"
+    serialized = properties.filler_words.model_dump(exclude_none=True)
+    assert serialized["content"]["mode"] == mode
+    assert serialized["trigger"] == {
+        "mode": "fixed_time",
+        "fixed_time_config": {"response_wait_ms": 1500},
+    }
+    if mode == "generated":
+        assert "llm_provider" not in serialized["content"]["generated_config"]

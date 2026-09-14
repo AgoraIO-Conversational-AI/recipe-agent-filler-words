@@ -25,6 +25,10 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/get_config`,
       },
       {
+        source: '/api/filler_config',
+        destination: `${backendUrl}/filler_config`,
+      },
+      {
         source: '/api/startAgent',
         destination: `${backendUrl}/startAgent`,
       },
