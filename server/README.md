@@ -15,11 +15,20 @@ separate `llm/` service** in this recipe.
 
 ### filler_words
 
-A static phrase list (defined in `server/src/filler_config.py`) is passed to
-`AgoraAgent` as `filler_words`. Agora plays a randomly selected phrase from the
-list while the LLM is generating a response, masking dead air. SDK 2.0.0
-supports `mode: "static"` only — LLM-generated fillers are not available in
-this version.
+The builder in `server/src/filler_config.py` is passed to `AgoraAgent` as
+`filler_words`. Static mode (the default) plays a randomly selected phrase from
+the built-in list while the LLM is generating a response. Choose **Generated**
+in the web UI or send `"fillerWordsMode": "generated"` to `/startAgent` to use
+Engine 2.12 generated fillers. The SDK's default Engine-managed generator runs
+in parallel with the main business LLM and falls back to the static list if
+generation is not ready, fails, or returns empty text. No filler provider URL,
+API key, or model is needed.
+
+`FILLER_WORDS_MODE` supplies the initial web selection and the mode for requests
+that omit `fillerWordsMode`; it defaults to `static`. The web app reads the
+default through `/filler_config` before enabling its mode selector. Each start
+request's selection takes precedence without affecting other sessions. Restart
+the backend and refresh the page after changing this environment variable.
 
 ### farewell_config
 
@@ -53,13 +62,30 @@ Optional:
 | --- | :---: | --- |
 | `OPENAI_MODEL` | `gpt-4o-mini` | OpenAI model for the assistant |
 | `OPENAI_API_KEY` | — | BYO only — Agora manages the OpenAI key by default (keyless). Set only if your account requires it. |
+| `FILLER_WORDS_MODE` | `static` | Initial web selection and default when a start request omits `fillerWordsMode`; `static` or `generated`. |
 | `TTS_VOICE` | `English_captivating_female1` | MiniMax TTS voice |
 | `AGENT_GREETING` | built-in | Optional opening line override |
 
+Generated mode uses the built-in prompt and the SDK's default Engine-managed
+generator. Legacy `FILLER_LLM_*` variables are ignored and can be removed.
+Both modes use a 1500 ms response-wait trigger, matching the Engine default and
+configured by `FILLER_RESPONSE_WAIT_MS` in `src/filler_config.py`. If the primary
+LLM responds before the deadline, no filler plays. In Generated mode, generation
+runs in parallel with the primary LLM; if no generated phrase is ready at the
+deadline, Engine plays a static fallback and cancels the pending generation.
+A shorter wait makes static fallback more likely.
+
+Startup logs include the selected mode and threshold. Restart the backend and
+start a new conversation after changes. No custom endpoint or public tunnel is
+required.
+
 ## API
 
+- `GET /filler_config` — public defaults as `data.default_mode`; no token or
+  session is created
 - `GET /get_config` — token + channel/UID config
-- `POST /startAgent` — start an agent session
+- `POST /startAgent` — start an agent session; optional `fillerWordsMode` accepts
+  `static` or `generated` (invalid values return HTTP 422)
 - `POST /stopAgent` — stop an agent session
 
 The repo-root `bun run verify:local:fastapi` exercises these routes through the

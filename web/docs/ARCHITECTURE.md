@@ -61,9 +61,9 @@ web/
 
 - Routing: single App Router page at `/`
 - Data flow:
-  1. `LandingPage` calls `GET /api/get_config`
-  2. Next rewrites to FastAPI `/get_config`
-  3. Browser starts the agent via `POST /api/startAgent`, logs into RTM, and renders `ConversationComponent`
+  1. `LandingPage` reads `GET /api/filler_config` and initializes the mode selector from the backend's `FILLER_WORDS_MODE`; loading or failed settings keep startup disabled
+  2. On start, it calls `GET /api/get_config`; Next rewrites all `/api/*` calls to FastAPI
+  3. Browser starts the agent via `POST /api/startAgent` with the selected `fillerWordsMode`, logs into RTM, and renders `ConversationComponent`
   4. `ConversationComponent` joins RTC, initializes `AgoraVoiceAI`, publishes the microphone, and renders transcript/state/metrics
   5. End call posts `/api/stopAgent`, logs out of RTM, and clears browser state
 - Error handling: `ErrorBoundary`, `ConnectionStatusPanel`, and issue aggregation in `ConversationComponent`

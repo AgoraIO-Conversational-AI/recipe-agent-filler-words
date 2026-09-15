@@ -1,6 +1,7 @@
 import os
 import sys
 
+import dotenv
 import uvicorn
 
 
@@ -8,7 +9,7 @@ class FakeAgent:
     def __init__(self):
         self.started_agent_ids = set()
 
-    async def start(self, channel_name: str, agent_uid: int, user_uid: int, output_audio_codec=None):
+    async def start(self, channel_name: str, agent_uid: int, user_uid: int, output_audio_codec=None, filler_words_mode=None):
         if not channel_name or agent_uid <= 0 or user_uid <= 0:
             raise ValueError("channel_name, agent_uid, and user_uid must be valid")
 
@@ -32,6 +33,9 @@ def main():
     if src_root not in sys.path:
         sys.path.insert(0, src_root)
 
+    # Smoke tests inject deterministic values through the child-process env.
+    # Do not let server/.env.local override those values on import.
+    dotenv.load_dotenv = lambda *args, **kwargs: False
     import server as server_module
 
     server_module.agent = FakeAgent()

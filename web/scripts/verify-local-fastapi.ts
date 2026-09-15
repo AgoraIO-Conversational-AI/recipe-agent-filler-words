@@ -128,6 +128,7 @@ async function main() {
       ...process.env,
       AGORA_APP_ID: '0123456789abcdef0123456789abcdef',
       AGORA_APP_CERTIFICATE: 'fedcba9876543210fedcba9876543210',
+      FILLER_WORDS_MODE: 'generated',
       PORT: String(port),
     },
     stdout: 'ignore',
@@ -139,6 +140,14 @@ async function main() {
 
     process.env.AGENT_BACKEND_URL = backendUrl
 
+    const fillerResponse = await requestViaRewrite('/api/filler_config')
+    const fillerBody = await getJson(fillerResponse)
+    assert(fillerResponse.status === 200, 'GET /api/filler_config should proxy to FastAPI')
+    assert(
+      (fillerBody.data as Record<string, unknown>)?.default_mode === 'generated',
+      'GET /api/filler_config should expose the backend environment default',
+    )
+
     const response = await requestViaRewrite('/api/get_config?uid=4321&channel=python-smoke')
     const body = await getJson(response)
 
@@ -146,6 +155,10 @@ async function main() {
     assert(body.code === 0, 'GET /api/get_config should preserve the FastAPI success payload')
 
     const data = body.data as Record<string, unknown> | undefined
+    assert(
+      data?.app_id === '0123456789abcdef0123456789abcdef',
+      'GET /api/get_config should use the smoke-test App ID',
+    )
     assert(data?.uid === '4321', 'GET /api/get_config should preserve the requested uid through FastAPI')
     assert(
       data?.channel_name === 'python-smoke',

@@ -4,6 +4,7 @@ Agora Agent & Token Service — Filler Words Recipe
 
 HTTP APIs:
 - GET  /get_config     -> Generate connection config
+- GET  /filler_config  -> Get the default filler mode
 - POST /startAgent     -> Start agent
 - POST /stopAgent      -> Stop agent
 """
@@ -11,7 +12,7 @@ import logging
 import os
 import random
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Literal, Optional
 from dotenv import load_dotenv
 
 # Load environment variables from .env.local or .env
@@ -24,6 +25,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from agora_agent.agentkit.token import generate_convo_ai_token
 from agent import Agent
+from filler_config import build_filler_words
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -81,6 +83,7 @@ class StartAgentRequest(BaseModel):
     channelName: str
     rtcUid: int
     userUid: int
+    fillerWordsMode: Optional[Literal["static", "generated"]] = None
     parameters: Optional[Dict[str, Any]] = None
 
 
@@ -140,6 +143,20 @@ async def get_config(
         raise _to_http_error(e)
 
 
+@router.get("/filler_config")
+async def get_filler_config():
+    """Read public filler settings without minting a token or starting a session."""
+    try:
+        return {
+            "code": 0,
+            "data": {"default_mode": build_filler_words()["content"]["mode"]},
+            "msg": "success",
+        }
+    except Exception as e:
+        _log_route_error("/filler_config", e)
+        raise _to_http_error(e)
+
+
 @router.post("/startAgent")
 async def start_agent(request: StartAgentRequest):
     """Start filler-words agent in a channel"""
@@ -159,6 +176,7 @@ async def start_agent(request: StartAgentRequest):
             agent_uid=request.rtcUid,
             user_uid=request.userUid,
             output_audio_codec=output_audio_codec,
+            filler_words_mode=request.fillerWordsMode,
         )
         return {"code": 0, "msg": "success", "data": result}
     except Exception as e:

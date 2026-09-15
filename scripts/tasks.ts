@@ -16,7 +16,7 @@ const venvPython = path.join(
 const compileTargets = ["server.py","agent.py","filler_config.py"]
 const requiredEnv = ["AGORA_APP_ID","AGORA_APP_CERTIFICATE"]
 const publicUrlKey = null
-const requirements = ["requirements.txt"]
+const requirements = ["requirements.txt", "requirements-dev.txt"]
 const setupMessage = "\nSetup complete! Next steps:\n   1. agora project env write server/.env.local   (or fill it in manually)\n   2. Fill in AGORA_APP_ID + AGORA_APP_CERTIFICATE in server/.env.local\n   3. Optionally set OPENAI_MODEL, TTS_VOICE, AGENT_GREETING\n   4. bun run dev\n\n"
 
 async function run(command: Command, cwd = root, env = process.env) {

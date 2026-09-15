@@ -9,8 +9,12 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { LoadingSkeleton } from "@/components/LoadingSkeleton";
 import { QuickstartPreCallCard } from "@/components/QuickstartPreCallCard";
 import { ShareButton } from "@/components/share-button";
-import { getConfig, startAgent, stopAgent } from "@/services/api";
-import type { AgoraRenewalTokens, AgoraTokenData } from "@/types/conversation";
+import { getConfig, getFillerConfig, startAgent, stopAgent } from "@/services/api";
+import type {
+	AgoraRenewalTokens,
+	AgoraTokenData,
+	FillerWordsMode,
+} from "@/types/conversation";
 
 const ConversationComponent = dynamic(
 	() => import("@/components/ConversationComponent"),
@@ -93,6 +97,26 @@ export default function LandingPage() {
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [agentJoinError, setAgentJoinError] = useState(false);
+	const [fillerWordsMode, setFillerWordsMode] =
+		useState<FillerWordsMode | null>(null);
+
+	useEffect(() => {
+		let active = true;
+		getFillerConfig()
+			.then((config) => {
+				if (active) setFillerWordsMode(config.default_mode);
+			})
+			.catch(() => {
+				if (active) {
+					setError(
+						"Failed to load conversation settings. Refresh the page to try again.",
+					);
+				}
+			});
+		return () => {
+			active = false;
+		};
+	}, []);
 
 	useEffect(() => {
 		import("agora-rtc-react").catch(() => {});
@@ -100,6 +124,7 @@ export default function LandingPage() {
 	}, []);
 
 	const handleStartConversation = async () => {
+		if (fillerWordsMode === null) return;
 		setIsLoading(true);
 		setError(null);
 		setAgentJoinError(false);
@@ -113,6 +138,7 @@ export default function LandingPage() {
 					config.channel_name,
 					Number(config.agent_uid),
 					Number(config.uid),
+					fillerWordsMode,
 				).catch((err) => {
 					console.error("Failed to start conversation with agent:", err);
 					setAgentJoinError(true);
@@ -208,6 +234,8 @@ export default function LandingPage() {
 						<QuickstartPreCallCard
 							isLoading={isLoading}
 							error={error}
+							fillerWordsMode={fillerWordsMode}
+							onFillerWordsModeChange={setFillerWordsMode}
 							onStartConversation={handleStartConversation}
 						/>
 					) : agoraData && rtmClient ? (
