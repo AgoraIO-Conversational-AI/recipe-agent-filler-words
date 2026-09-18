@@ -19,8 +19,9 @@ FILLER_PHRASES = [
 
 
 DEFAULT_GENERATED_PROMPT = (
-    "Generate one short conversational filler phrase based on the user's last "
-    "message. Do not answer the user or add punctuation beyond the phrase."
+    "Generate one short conversational filler phrase based on the recent "
+    "conversation context. Return only the filler phrase and do not answer the user's "
+    "question. End the phrase with appropriate punctuation."
 )
 
 
@@ -52,6 +53,8 @@ def build_generated_filler_words(
     generated_config = {
         "prompt": resolved_prompt,
         "fallback_strategy": "static",
+        "context_message_limit": 4,
+        "history_character_limit": 1000,
     }
 
     # Share the same trigger and phrase list with static mode. Generated mode

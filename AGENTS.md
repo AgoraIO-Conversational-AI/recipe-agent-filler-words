@@ -63,6 +63,8 @@ With:
   that is not ready at the deadline uses the static fallback.
 - `build_filler_words()` and `build_farewell()` are pure functions — test them
   without any agora_agent import.
+- Generated fillers use up to four recent messages and 1000 history characters
+  through `context_message_limit` and `history_character_limit`.
 
 ## Anti-patterns
 
