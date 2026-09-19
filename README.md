@@ -90,8 +90,9 @@ Engine-managed generator. `FILLER_LLM_*` variables are no longer used; existing
 values can be removed. Both modes use a 1500 ms response-wait trigger, matching
 the Engine default. If the primary LLM produces content before that deadline,
 no filler plays. In Generated mode, filler generation runs in parallel with the
-primary LLM. At the deadline, Engine plays a ready generated phrase or a built-in
-static fallback if generation is not ready, fails, or returns empty text.
+primary LLM and uses up to four recent messages, capped at 1000 characters. At
+the deadline, Engine plays a ready generated phrase or a built-in static fallback
+if generation is not ready, fails, or returns empty text.
 
 ## Commands
 

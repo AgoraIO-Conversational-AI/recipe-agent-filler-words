@@ -26,6 +26,8 @@ def test_filler_words_payload_generated_with_static_fallback(monkeypatch):
     assert "llm_provider" not in content["generated_config"]
     assert content["generated_config"]["prompt"] == fc.DEFAULT_GENERATED_PROMPT
     assert content["generated_config"]["fallback_strategy"] == "static"
+    assert content["generated_config"]["context_message_limit"] == 4
+    assert content["generated_config"]["history_character_limit"] == 1000
 
 
 def test_generated_filler_uses_engine_provider_by_default(monkeypatch):

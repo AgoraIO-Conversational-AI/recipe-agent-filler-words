@@ -73,7 +73,8 @@ configured by `FILLER_RESPONSE_WAIT_MS` in `src/filler_config.py`. If the primar
 LLM responds before the deadline, no filler plays. In Generated mode, generation
 runs in parallel with the primary LLM; if no generated phrase is ready at the
 deadline, Engine plays a static fallback and cancels the pending generation.
-A shorter wait makes static fallback more likely.
+A shorter wait makes static fallback more likely. Generated fillers use up to
+four recent messages, capped at 1000 characters, as conversation context.
 
 Startup logs include the selected mode and threshold. Restart the backend and
 start a new conversation after changes. No custom endpoint or public tunnel is

@@ -64,7 +64,8 @@ No filler provider URL, API key, or model is configured by the developer.
   plays a ready generated phrase or the static fallback and cancels any pending
   generation.
 - `build_generated_filler_words()` — omits `llm_provider` to use the SDK's
-  default Engine-managed generator.
+  default Engine-managed generator. Sets `context_message_limit=4` and
+  `history_character_limit=1000` to bound recent conversation context.
 - `build_farewell()` — returns the `farewell_config` dict embedded in
   `parameters`. Enables graceful exit with a 5-second window for the agent to
   speak a farewell before leaving the channel.
